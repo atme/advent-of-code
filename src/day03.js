@@ -1,8 +1,14 @@
+const parse = data => data.toString().trim().split("\n");
+
 exports.first = d => {
-  const [ wire1, wire2 ] = d.toString().trim().split("\n");
-  console.log(1);
+  const [ wire1, wire2 ] = parse(d);
   console.log( closestDistance(wire1, wire2) );
-  console.log(2);
+};
+
+
+exports.second = d => {
+  const [ wire1, wire2 ] = parse(d);
+  console.log( minSteps(wire1, wire2) );
 };
 
 
@@ -14,16 +20,37 @@ const closestDistance = (wire1, wire2) => {
 exports.closestDistance = closestDistance;
 
 
+const minSteps = (wire1, wire2) => {
+  const path1 = path(wire1);
+  const path2 = path(wire2);
+  const crossPoints = cross(path1, path2);
+  const steps1 = crossPoints.map(point => steps(point, path1));
+  const steps2 = crossPoints.map(point => steps(point, path2));
+  return steps1.map((step, index) => step + steps2[index]).reduce(min);
+};
+exports.minSteps = minSteps;
+
+
 const min = (acc, value) => acc < value ? acc : value;
 const distance = point => Math.abs(point.x) + Math.abs(point.y);
-const cross = (path1, path2) => path1.filter(point => path2.has(point));
+const cross = (path1, path2) => {
+  path1 = index(path1);
+  path2 = index(path2);
+  const path = path1.map((elements, x) => {
+    if (path2[x] === undefined) {
+      return [];
+    }
+    return elements.filter(y => path2[x].indexOf(y) !== -1)
+  });
+  return deindex(path);
+};
 
 
 const path = wire => {
-  let current = new Point(0, 0);
+  let current = {x: 0, y: 0};
 
   const generate = route => {
-    const direction = new Point(0, 0);
+    const direction = {x: 0, y: 0};
     switch (route.slice(0, 1)) {
       case 'U':
         direction.y = 1;
@@ -41,34 +68,39 @@ const path = wire => {
 
     const steps = parseInt(route.slice(1));
     return Array.from(Array(steps), _ => {
-      current = current.add(direction);
+      current = add(current, direction);
       return current;
     });
   };
 
-  return Path.from( wire.split(',') ).flatMap(generate);
+  return wire.split(',').flatMap(generate);
 };
 
 
-class Point {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  equal(point) {
-    return this.x === point.x && this.y === point.y
-  }
-
-  add (point) {
-    return new Point(this.x + point.x, this.y + point.y)
-  }
-}
+const add = (p1, p2) => ({
+  x: p1.x + p2.x,
+  y: p1.y + p2.y
+});
 
 
-class Path extends Array {
-  has (point) {
-    console.log(point);
-    return this.find(p => point.equal(p));
-  }
-}
+const equal = (p1, p2) => p1.x === p2.x && p1.y === p2.y
+const steps = (point, path) => path.findIndex(p => equal(p, point)) + 1;
+
+
+const salt = 10000;
+
+const index = path => {
+  const result = [];
+  path.forEach(element => {
+    if (result[element.x + salt] !== undefined) {
+      result[element.x + salt].push(element.y)
+    } else {
+      result[element.x + salt] = [element.y];
+    }
+  });
+  return result;
+};
+
+const deindex = path => path.flatMap((elements, x) =>
+  elements.map(y => ( {x: x - salt, y} ))
+);

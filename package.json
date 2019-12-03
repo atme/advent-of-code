@@ -1,0 +1,23 @@
+{
+  "name": "adventofcode",
+  "version": "1.0.0",
+  "description": "Advent of Code 2019",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atme/advent-of-code.git"
+  },
+  "author": "Serge Pirogov",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/atme/advent-of-code/issues"
+  },
+  "private": true,
+  "homepage": "https://github.com/atme/advent-of-code#readme",
+  "devDependencies": {
+    "jest": "^24.9.0"
+  }
+}

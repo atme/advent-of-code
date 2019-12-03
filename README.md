@@ -3,9 +3,9 @@
 
 ## How to run
 1. Create a `cookie` file in the directory and put your session cookie from the site
-2. Run in a terminal `node src/day01_1.js`
+2. Run in a terminal `node src/index.js [day]` or `node src/index.js [day]+` for part two
 
 ```sh
 $ echo your_session_cookie_token > cookie
-$ node src/day01_1.js
+$ node src/index.js 2+
 ```

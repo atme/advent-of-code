@@ -12,6 +12,7 @@ exports.second = d => {
 };
 
 
+// Part One
 const closestDistance = (wire1, wire2) => {
   const path1 = path(wire1);
   const path2 = path(wire2);
@@ -20,6 +21,7 @@ const closestDistance = (wire1, wire2) => {
 exports.closestDistance = closestDistance;
 
 
+// Part Two
 const minSteps = (wire1, wire2) => {
   const path1 = path(wire1);
   const path2 = path(wire2);
@@ -31,26 +33,21 @@ const minSteps = (wire1, wire2) => {
 exports.minSteps = minSteps;
 
 
+// Helpers
 const min = (acc, value) => acc < value ? acc : value;
 const distance = point => Math.abs(point.x) + Math.abs(point.y);
-const cross = (path1, path2) => {
-  path1 = index(path1);
-  path2 = index(path2);
-  const path = path1.map((elements, x) => {
-    if (path2[x] === undefined) {
-      return [];
-    }
-    return elements.filter(y => path2[x].indexOf(y) !== -1)
-  });
-  return deindex(path);
-};
+const equal = (p1, p2) => p1.x === p2.x && p1.y === p2.y
+const steps = (point, path) => path.findIndex(p => equal(p, point)) + 1;
+const range = steps => Array.from(Array(steps));
+const point = (x = 0, y = 0) => ({x, y});
+const add = (p1, p2) => point(p1.x + p2.x, p1.y + p2.y);
 
 
 const path = wire => {
-  let current = {x: 0, y: 0};
+  let current = point();
 
   const generate = route => {
-    const direction = {x: 0, y: 0};
+    const direction = point();
     switch (route.slice(0, 1)) {
       case 'U':
         direction.y = 1;
@@ -67,7 +64,7 @@ const path = wire => {
     }
 
     const steps = parseInt(route.slice(1));
-    return Array.from(Array(steps), _ => {
+    return range(steps).map(_ => {
       current = add(current, direction);
       return current;
     });
@@ -77,30 +74,31 @@ const path = wire => {
 };
 
 
-const add = (p1, p2) => ({
-  x: p1.x + p2.x,
-  y: p1.y + p2.y
-});
-
-
-const equal = (p1, p2) => p1.x === p2.x && p1.y === p2.y
-const steps = (point, path) => path.findIndex(p => equal(p, point)) + 1;
-
-
-const salt = 10000;
-
-const index = path => {
+const cross = (path1, path2) => {
+  const map1 = fold(path1);
+  const map2 = fold(path2);
   const result = [];
-  path.forEach(element => {
-    if (result[element.x + salt] !== undefined) {
-      result[element.x + salt].push(element.y)
-    } else {
-      result[element.x + salt] = [element.y];
+  for (const [x, elements] of map1) {
+    if (map2.has(x)) {
+      elements
+        .filter(y => map2.get(x).indexOf(y) !== -1)
+        .forEach(y => {
+          result.push( point(x, y) );
+        });
     }
-  });
+  }
   return result;
 };
 
-const deindex = path => path.flatMap((elements, x) =>
-  elements.map(y => ( {x: x - salt, y} ))
-);
+
+// Optimization
+const fold = path => {
+  const map = new Map();
+  for (const {x, y} of path) {
+    if (!map.has(x)) {
+      map.set(x, []);
+    }
+    map.get(x).push(y);
+  }
+  return map;
+};

@@ -1,4 +1,4 @@
-const parse = d => d.toString().split(",").map(e => parseInt(e));
+const parse = d => d.split(",").map(e => parseInt(e));
 
 exports.first = d => {
   const opcode = parse(d);

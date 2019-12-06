@@ -1,4 +1,4 @@
-const parse = data => data.toString().trim().split("\n");
+const parse = data => data.trim().split("\n");
 
 exports.first = d => {
   const [ wire1, wire2 ] = parse(d);

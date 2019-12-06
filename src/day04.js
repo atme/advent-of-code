@@ -1,4 +1,4 @@
-const parse = d => d.toString().trim().split('-').map(e => +e);
+const parse = d => d.trim().split('-').map(e => +e);
 
 exports.first = d => {
   const [ begin, end ] = parse(d);

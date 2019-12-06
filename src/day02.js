@@ -1,15 +1,17 @@
+const parse = d => d.split(",").map(Number);
+
 exports.first = d => {
-  const opcode = d.toString().split(",").map(e => parseInt(e));
+  const opcode = parse(d);
 
   opcode[1] = 12;
   opcode[2] = 2;
 
-  process.stdout.write(run(opcode) + "\n");
+  console.log( run(opcode) );
 };
 
 exports.second = d => {
   const result = 19690720;
-  const opcode = d.toString().split(",").map(e => parseInt(e));
+  const opcode = parse(d);
 
   for (let noun = 0; noun < 100; noun++) {
     for (let verb = 0; verb < 100; verb++) {
@@ -19,7 +21,7 @@ exports.second = d => {
 
       const output = run(memory);
       if (output === result) {
-        process.stdout.write(100 * noun + verb + "\n");
+        console.log(100 * noun + verb);
         return;
       }
     }

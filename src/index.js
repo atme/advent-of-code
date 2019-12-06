@@ -15,5 +15,12 @@ const callback = require('./day0' + day + '.js')[type];
 https.get('https://adventofcode.com/2019/day/'+day+'/input', {
   headers: { cookie }
 }, res => {
-  res.on('data', callback);
+  let rawData = '';
+  res.setEncoding('utf8');
+  res.on('data', chunk => {
+    rawData += chunk;
+  });
+  res.on('end', () => {
+    callback(rawData);
+  })
 });

@@ -1,9 +1,10 @@
 {
-  "name": "adventofcode",
-  "version": "1.0.0",
-  "description": "Advent of Code 2019",
+  "name": "advent-of-code",
+  "version": "2019.8.0",
+  "description": "Advent of Code",
   "main": "src/index.js",
   "scripts": {
+    "day": "node src/index.js",
     "test": "jest"
   },
   "repository": {

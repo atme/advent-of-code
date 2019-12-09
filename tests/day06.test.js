@@ -12,7 +12,7 @@ test('day 6-1 returns correct total number of orbits', () => {
     'D)I',
     'E)J',
     'J)K',
-    'K)L'
+    'K)L',
   ];
   expect(day06.count(orbits)).toBe(42);
 });
@@ -31,7 +31,7 @@ test('day 6-2 returns minimum number of orbital transfers', () => {
     'J)K',
     'K)L',
     'K)YOU',
-    'I)SAN'
+    'I)SAN',
   ];
   expect(day06.transfers(orbits)).toBe(4);
 });

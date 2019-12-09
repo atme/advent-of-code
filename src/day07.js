@@ -1,71 +1,96 @@
-const parse = d => d.split(",").map(Number);
-
-exports.first = d => {
-  const opcode = parse(d);
-
-  console.log ( Math.max(...signals(opcode)) );
+const counter = (index) => {
+  let num = index;
+  return () => {
+    num += 1;
+    return num;
+  };
 };
-
-exports.second = d => {
-  const opcode = parse(d);
-
-  console.log ( Math.max(...signals_loop(opcode)) );
-};
-
-// Part One
-const signals = opcode =>
-  sequences([0, 1, 2, 3, 4]).map(phases => ampfliers(opcode, phases));
-exports.signals = signals;
-
-// Part Two
-const signals_loop = opcode =>
-  sequences([5, 6, 7, 8, 9]).map(phases => ampfliers(opcode, phases));
-exports.signals_loop = signals_loop;
-
-
-
-// Helpers
-
-const ampfliers = (opcode, phases) => {
-  const ampfliers = phases.map(phase => ampflier(phase, opcode));
-  let output = 0;
-  while (ampfliers.indexOf(null) === -1) {
-    for (let i = 0; i < ampfliers.length; i++) {
-      [ output, ampfliers[i] ] = ampfliers[i](output);
-    }
-  }
-  return output;
-}
-exports.ampfliers = ampfliers
-
-const ampflier = (phase, opcode) => intcode(opcode)(phase);
-exports.ampflier = ampflier;
-
-const sequences = sequence => {
-  if (sequence.length < 2) {
-    return sequence;
-  } else if (sequence.length == 2) {
-    return [ sequence, [ sequence[1], sequence[0] ] ];
-  }
-  return sequence.flatMap(generate);
-};
-
-const generate = (element, index, sequence) => {
-  const rest = sequence.slice(0, index).concat( sequence.slice(index + 1) );
-  return sequences(rest).map(seq => [ element ].concat(seq));
-};
-
-
 
 // -- Intcode computer
 
-/**
- * Execute opcode
- * @param {Array.<number>} opcode
- * @returns {function}
- */
-const intcode = opcode => command([...opcode], 0);
+const end = () => null;
 
+const value = (mode, memory, index) => (
+  mode === 1
+    ? memory[index]
+    : memory[memory[index]]
+);
+
+const add = (memory, index, mode) => {
+  const next = counter(index);
+  const values = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const mem = [...memory];
+  mem[output] = values[0] + values[1];
+  return [mem, next()];
+};
+
+const multiply = (memory, index, mode) => {
+  const next = counter(index);
+  const values = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const mem = [...memory];
+  mem[output] = values[0] * values[1];
+  return [mem, next()];
+};
+
+const jumpIfTrue = (memory, index, mode) => {
+  const next = counter(index);
+  const cond = value(mode[0], memory, next());
+  const pointer = value(mode[1], memory, next());
+  return [memory, cond !== 0 ? pointer : next()];
+};
+
+const jumpIfFalse = (memory, index, mode) => {
+  const next = counter(index);
+  const cond = value(mode[0], memory, next());
+  const pointer = value(mode[1], memory, next());
+  return [memory, cond === 0 ? pointer : next()];
+};
+
+const lessThan = (memory, index, mode) => {
+  const next = counter(index);
+  const params = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const mem = [...memory];
+  mem[output] = params[0] < params[1] ? 1 : 0;
+  return [mem, next()];
+};
+
+const equal = (memory, index, mode) => {
+  const next = counter(index);
+  const params = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const mem = [...memory];
+  mem[output] = params[0] === params[1] ? 1 : 0;
+  return [mem, next()];
+};
+
+const input = (memory, index, command) => (_input) => {
+  const next = counter(index);
+  const output = memory[next()];
+  const mem = [...memory];
+  mem[output] = _input;
+  return command(mem, next());
+};
+
+const output = (memory, index, mode) => [
+  value(mode[0], memory, index + 1),
+  memory,
+  index + 2,
+];
 
 /**
  * Execute instruction
@@ -77,97 +102,95 @@ const intcode = opcode => command([...opcode], 0);
  */
 const command = (memory, index) => {
   const code = memory[index].toString().padStart(5, 0);
-  const instruction = parseInt( code.slice(-2) );
-  const mode = code.slice(0, -2).split('').reverse().map(m => +m);
+  const instruction = parseInt(code.slice(-2), 10);
+  const mode = code.slice(0, -2).split('').reverse().map(Number);
 
   switch (instruction) {
-    case 99:
-      return end();
     case 1:
-      return add(memory, index, mode);
+      return command(...add(memory, index, mode));
     case 2:
-      return multiply(memory, index, mode);
+      return command(...multiply(memory, index, mode));
     case 3:
-      return input(memory, index);
-    case 4:
-      return output(memory, index, mode);
+      return input(memory, index, command);
+    case 4: {
+      const [result, ...params] = output(memory, index, mode);
+      return [result, command(...params)];
+    }
     case 5:
-      return jump_if_true(memory, index, mode);
+      return command(...jumpIfTrue(memory, index, mode));
     case 6:
-      return jump_if_false(memory, index, mode);
+      return command(...jumpIfFalse(memory, index, mode));
     case 7:
-      return less_than(memory, index, mode);
+      return command(...lessThan(memory, index, mode));
     case 8:
-      return equal(memory, index, mode);
+      return command(...equal(memory, index, mode));
+    case 99:
+    default:
+      return end();
   }
 };
 
 
-const end = () => null;
+/**
+ * Execute opcode
+ * @param {Array.<number>} opcode
+ * @returns {function}
+ */
+const intcode = (opcode) => command([...opcode], 0);
 
-const value = (mode, memory, index) => mode === 1
-  ? memory[index]
-  : memory[ memory[index] ];
 
-const add = (memory, index, mode) => {
-  const values = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = values[0] + values[1];
-  return command(memory, ++index);
+const ampflier = (phase, opcode) => intcode(opcode)(phase);
+exports.ampflier = ampflier;
+
+
+const runAmpfliers = (opcode, phases) => {
+  const ampfliers = phases.map((phase) => ampflier(phase, opcode));
+  let result = 0;
+  while (ampfliers.indexOf(null) === -1) {
+    for (let i = 0; i < ampfliers.length; i += 1) {
+      [result, ampfliers[i]] = ampfliers[i](result);
+    }
+  }
+  return result;
+};
+exports.runAmpfliers = runAmpfliers;
+
+
+const sequences = (sequence) => {
+  if (sequence.length < 2) {
+    return sequence;
+  }
+  if (sequence.length === 2) {
+    return [sequence, [sequence[1], sequence[0]]];
+  }
+  return sequence.flatMap((element, index) => {
+    const rest = sequence.slice(0, index).concat(sequence.slice(index + 1));
+    return sequences(rest).map((seq) => [element].concat(seq));
+  });
 };
 
-const multiply = (memory, index, mode) => {
-  const values = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = values[0] * values[1];
-  return command(memory, ++index);
+
+// Part One
+const signals = (opcode) => sequences([0, 1, 2, 3, 4]).map(
+  (phases) => runAmpfliers(opcode, phases),
+);
+exports.signals = signals;
+
+// Part Two
+const signalsLoop = (opcode) => sequences([5, 6, 7, 8, 9]).map(
+  (phases) => runAmpfliers(opcode, phases),
+);
+exports.signalsLoop = signalsLoop;
+
+
+const parse = (d) => d.split(',').map(Number);
+
+exports.first = (d) => {
+  const opcode = parse(d);
+  console.log(Math.max(...signals(opcode)));
 };
 
-const input = (memory, index) => input => {
-  const output = memory[++index];
-  memory[output] = input;
-  return command(memory, ++index);
-}; 
-
-const output = (memory, index, mode) => [
-  value(mode[0], memory, ++index),
-  command(memory, ++index)
-];
-
-const jump_if_true = (memory, index, mode) => {
-  const cond = value(mode[0], memory, ++index);
-  const pointer = value(mode[1], memory, ++index);
-  return command(memory, cond !== 0 ? pointer : ++index);
+exports.second = (d) => {
+  const opcode = parse(d);
+  console.log(Math.max(...signalsLoop(opcode)));
 };
-
-const jump_if_false = (memory, index, mode) => {
-  const cond = value(mode[0], memory, ++index);
-  const pointer = value(mode[1], memory, ++index);
-  return command(memory, cond === 0 ? pointer : ++index);
-};
-
-const less_than = (memory, index, mode) => {
-  const params = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = params[0] < params[1] ? 1 : 0;
-  return command(memory, ++index);
-}
-
-const equal = (memory, index, mode) => {
-  const params = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = params[0] === params[1] ? 1 : 0;
-  return command(memory, ++index);
-}

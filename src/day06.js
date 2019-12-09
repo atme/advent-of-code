@@ -1,48 +1,20 @@
-const parse = d => d.trim().split("\n");
-
-exports.first = d => {
-  const orbits = parse(d);
-  console.log ( count(orbits) );
-};
-
-exports.second = d => {
-  const orbits = parse(d);
-  console.log ( transfers(orbits) );
-};
-
-// Part One
-const count = orbits => map(orbits).parents().reduce(sum);
-exports.count = count;
-
-// Part Two
-const transfers = orbits => {
-  const you = 'YOU';
-  const santa = 'SAN';
-  return map(orbits).distance(you, santa);
-};
-exports.transfers = transfers;
-
-const map = orbits => new OrbitMap( orbits.map(o => o.split(')')) );
-const sum = (acc, val) => acc + val;
+const samePointOn = (path) => (point) => path.indexOf(point) !== -1;
+const cross = (path1, path2) => path1.find(samePointOn(path2));
 
 class OrbitMap {
   constructor(orbits) {
     this.orbits = {};
-    for (const orbit of orbits) {
-      this.orbits[orbit[1]] = orbit[0];
-    }
+    orbits.forEach((orbit) => {
+      [this.orbits[orbit[1]]] = orbit;
+    });
   }
 
   parents() {
-    const result = []; 
-    for (const i in this.orbits) {
-      result.push( this.path(i).length );
-    }
-    return result;
+    return Object.keys(this.orbits).map((key) => this.path(key).length);
   }
 
   path(i) {
-    if (this.orbits.hasOwnProperty(i)) {
+    if (Object.prototype.hasOwnProperty.call(this.orbits, i)) {
       const path = this.path(this.orbits[i]);
       path.push(i);
       return path;
@@ -51,22 +23,45 @@ class OrbitMap {
   }
 
   distance(from, to) {
-    const from_path = this.path(from).reverse();
-    const to_path = this.path(to).reverse();
-    const cross = this.cross(from_path, to_path);
+    const fromPath = this.path(from).reverse();
+    const toPath = this.path(to).reverse();
+    const crossPoint = cross(fromPath, toPath);
 
     // remove 'YOU' and 'SAN'
-    from_path.shift()
-    to_path.shift();
+    fromPath.shift();
+    toPath.shift();
 
-    return from_path.indexOf(cross) + to_path.indexOf(cross);
-  }
-
-  cross(path1, path2) {
-    for (const point of path1) {
-      if (path2.indexOf(point) !== -1) {
-        return point;
-      }
-    }
+    return fromPath.indexOf(crossPoint) + toPath.indexOf(crossPoint);
   }
 }
+
+const split = (char) => (string) => string.split(char);
+const map = (orbits) => new OrbitMap(orbits.map(split(')')));
+const sum = (acc, val) => acc + val;
+
+
+// Part One
+const count = (orbits) => map(orbits).parents().reduce(sum);
+exports.count = count;
+
+
+// Part Two
+const transfers = (orbits) => {
+  const you = 'YOU';
+  const santa = 'SAN';
+  return map(orbits).distance(you, santa);
+};
+exports.transfers = transfers;
+
+
+const parse = (d) => d.trim().split('\n');
+
+exports.first = (d) => {
+  const orbits = parse(d);
+  console.log(count(orbits));
+};
+
+exports.second = (d) => {
+  const orbits = parse(d);
+  console.log(transfers(orbits));
+};

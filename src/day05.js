@@ -1,136 +1,164 @@
-const parse = d => d.split(",").map(e => parseInt(e));
-
-exports.first = d => {
-  const opcode = parse(d);
-  const id = 1;
-
-  console.log ( run(opcode, id).output );
+const counter = (index) => {
+  let num = index;
+  return () => {
+    num += 1;
+    return num;
+  };
 };
 
-exports.second = d => {
-  const opcode = parse(d);
-  const id = 5;
+const value = (mode, memory, index) => (
+  mode === 1 ? memory[index] : memory[memory[index]]
+);
 
-  console.log ( run(opcode, id).output );
+const add = (memory, index, mode) => {
+  const next = counter(index);
+  const values = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const m = [...memory];
+  m[output] = values[0] + values[1];
+  return [m, next()];
 };
 
-/**
- * Execute opcode
- * @param {Array.<number>} opcode 
- * @param {number} storage - Input value
- * @param {number} index [index=0] - Index of command
- * @returns { {output: number, memory: Array.<number>} }
- */
-const run = (opcode, storage, index = 0) => {
-  const memory = [...opcode]
-  const [ _index, _storage ] = command(memory, storage, index);
-  return _index !== null
-    ? run (memory, _storage, _index)
-    : { output: _storage, memory };
+const multiply = (memory, index, mode) => {
+  const next = counter(index);
+  const values = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const m = [...memory];
+  m[output] = values[0] * values[1];
+  return [m, next()];
 };
-exports.run = run;
+
+const jumpIfTrue = (memory, index, mode) => {
+  const next = counter(index);
+  const cond = value(mode[0], memory, next());
+  const pointer = value(mode[1], memory, next());
+  return [
+    memory,
+    cond !== 0 ? pointer : next(),
+  ];
+};
+
+const jumpIfFalse = (memory, index, mode) => {
+  const next = counter(index);
+  const cond = value(mode[0], memory, next());
+  const pointer = value(mode[1], memory, next());
+  return [
+    memory,
+    cond === 0 ? pointer : next(),
+  ];
+};
+
+const lessThan = (memory, index, mode) => {
+  const next = counter(index);
+  const params = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const m = [...memory];
+  m[output] = params[0] < params[1] ? 1 : 0;
+  return [m, next()];
+};
+
+const equal = (memory, index, mode) => {
+  const next = counter(index);
+  const params = [
+    value(mode[0], memory, next()),
+    value(mode[1], memory, next()),
+  ];
+  const output = memory[next()];
+  const m = [...memory];
+  m[output] = params[0] === params[1] ? 1 : 0;
+  return [m, next()];
+};
+
+const input = (memory, index, storage) => {
+  const next = counter(index);
+  const output = memory[next()];
+  const m = [...memory];
+  m[output] = storage;
+  return [m, next(), storage];
+};
+
+const output = (memory, index, mode) => {
+  const next = counter(index);
+  const storage = value(mode[0], memory, next());
+  return [memory, next(), storage];
+};
+
 
 /**
  * Execute instruction
- * @param {Array.<number>} memory 
+ * @param {Array.<number>} memory
  * @param {number} storage Input value
  * @param {number} index Index of command
  * @returns { [number, number] | [null, number] } Tuple [ index, storage ]
  * - Program is finished and should immediately halt if first tuple element
  * is null
  */
-const command = (memory, storage, index) => {
+const command = (memory, index, storage) => {
   const code = memory[index].toString().padStart(5, 0);
-  const instruction = parseInt( code.slice(-2) );
-  const mode = code.slice(0, -2).split('').reverse().map(m => +m);
+  const instruction = parseInt(code.slice(-2), 10);
+  const mode = code.slice(0, -2).split('').reverse().map(Number);
 
   switch (instruction) {
-    case 99:
-      return end(storage);
     case 1:
-      return add(memory, index, storage, mode);
+      return [...add(memory, index, mode), storage];
     case 2:
-      return multiply(memory, index, storage, mode);
+      return [...multiply(memory, index, mode), storage];
     case 3:
       return input(memory, index, storage);
     case 4:
       return output(memory, index, mode);
     case 5:
-      return jump_if_true(memory, index, storage, mode);
+      return [...jumpIfTrue(memory, index, mode), storage];
     case 6:
-      return jump_if_false(memory, index, storage, mode);
+      return [...jumpIfFalse(memory, index, mode), storage];
     case 7:
-      return less_than(memory, index, storage, mode);
+      return [...lessThan(memory, index, mode), storage];
     case 8:
-      return equal(memory, index, storage, mode);
+      return [...equal(memory, index, mode), storage];
+    case 99:
+    default:
+      return [memory, null, storage];
   }
 };
 
-const end = storage => [ null, storage ];
 
-const value = (mode, memory, index) => mode === 1
-  ? memory[index]
-  : memory[ memory[index] ];
+/**
+ * Execute opcode
+ * @param {Array.<number>} opcode
+ * @param {number} storage - Input value
+ * @param {number} index [index=0] - Index of command
+ * @returns { {output: number, memory: Array.<number>} }
+ */
+const run = (opcode, storage, index = 0) => {
+  const [_opcode, _index, _storage] = command(opcode, index, storage);
+  return _index !== null
+    ? run(_opcode, _storage, _index)
+    : { output: _storage, memory: _opcode };
+};
+exports.run = run;
 
-const add = (memory, index, storage, mode) => {
-  const values = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = values[0] + values[1];
-  return [ ++index, storage ];
+
+const parse = (d) => d.split(',').map(Number);
+
+exports.first = (d) => {
+  const opcode = parse(d);
+  const id = 1;
+
+  console.log(run(opcode, id).output);
 };
 
-const multiply = (memory, index, storage, mode) => {
-  const values = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = values[0] * values[1];
-  return [ ++index, storage ];
+exports.second = (d) => {
+  const opcode = parse(d);
+  const id = 5;
+
+  console.log(run(opcode, id).output);
 };
-
-const input = (memory, index, storage) => {
-  const output = memory[++index];
-  memory[output] = storage;
-  return [ ++index, storage ];
-}; 
-
-const output = (memory, index, mode) => {
-  const storage = value(mode[0], memory, ++index);
-  return [ ++index, storage ];
-}; 
-
-const jump_if_true = (memory, index, storage, mode) => {
-  const cond = value(mode[0], memory, ++index);
-  const pointer = value(mode[1], memory, ++index);
-  return cond !== 0 ? [ pointer, storage ] : [ ++index, storage ];
-};
-
-const jump_if_false = (memory, index, storage, mode) => {
-  const cond = value(mode[0], memory, ++index);
-  const pointer = value(mode[1], memory, ++index);
-  return cond === 0 ? [ pointer, storage ] : [ ++index, storage ];
-};
-
-const less_than = (memory, index, storage, mode) => {
-  const params = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = params[0] < params[1] ? 1 : 0;
-  return [ ++index, storage ];
-}
-
-const equal = (memory, index, storage, mode) => {
-  const params = [
-    value(mode[0], memory, ++index),
-    value(mode[1], memory, ++index)
-  ];
-  const output = memory[++index];
-  memory[output] = params[0] === params[1] ? 1 : 0;
-  return [ ++index, storage ];
-}

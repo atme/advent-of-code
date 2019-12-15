@@ -10,7 +10,7 @@ if (Number.isNaN(day) || day < 1 || day > 25) {
   process.exit(1);
 }
 const type = process.argv[2].slice(-1) === '+' ? 'second' : 'first';
-const file = `./day0${day}.js`;
+const file = `./day${day.toString().padStart(2, 0)}.js`;
 // eslint-disable-next-line import/no-dynamic-require
 const callback = require(file)[type];
 

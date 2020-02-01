@@ -1,6 +1,6 @@
 {
   "name": "advent-of-code",
-  "version": "2019.8.0",
+  "version": "2019.16.0",
   "description": "Advent of Code",
   "main": "src/index.js",
   "scripts": {

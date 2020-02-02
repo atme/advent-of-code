@@ -8,7 +8,7 @@ const pattern = (element, position) => {
 // sum :: number -> number -> number
 const sum = (a, b) => a + b;
 // lastDigit :: number -> number
-const lastDigit = (number) => number % 10;
+const lastDigit = (number) => Math.abs(number % 10);
 
 // memoize :: Function -> a -> Function a
 const memoize = (f) => {
@@ -25,20 +25,20 @@ const memoize = (f) => {
 // memoizedPattern :: number -> number -> number
 const memoizedPattern = memoize(pattern);
 
+// cals :: Array number -> Array number
+const calc = (_, element, signal) => signal.map(
+  (number, position) => number * memoizedPattern(element, position),
+).reduce(sum);
+
 // phase :: Array number -> Array number
-const phase = (signal) => signal.map(
-  (_, element) => signal.map(
-    (number, position) => number * memoizedPattern(element, position),
-  ).reduce(sum),
-).map(Math.abs).map(lastDigit);
+const phase = (signal) => signal.map(calc).map(lastDigit);
 exports.phase = phase;
 
 // phase :: Array number -> Array number
 const halfPhase = (signal) => {
   const array = [...signal];
   for (let i = array.length - 2; i >= 0; i -= 1) {
-    const value = Math.abs(array[i] + array[i + 1]);
-    array[i] = lastDigit(value);
+    array[i] = lastDigit(array[i] + array[i + 1]);
   }
   return array;
 };
@@ -68,7 +68,7 @@ exports.repeatHalfPhaseHundredTimes = repeatHalfPhaseHundredTimes;
 const repeatArray = (count, input) => {
   const output = [];
   for (let i = 0; i < count; i += 1) {
-    input.forEach((number) => output.push(number));
+    output.push(...input);
   }
   return output;
 };
